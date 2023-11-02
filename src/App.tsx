@@ -17,13 +17,17 @@ export default function App() {
     { role: "ai", text: ai_first_message }
   ];
 
+  // TODO: add sidebar for user to enter prompt, number of tokens to generate, temperature
+  // TODO: use html in messages so we can render furigana
+  // TODO: setup python yomikata endpoint: in responseInterceptor, call this endpoint to get furigana
+  // may need to add state to store messages if html messes up the text
 
   return (
     <div className="App">
       <Helmet>
         <style>{'body { background-color: #1d212f; font-family: \'Inter Variable\', sans-serif;}'}</style>
       </Helmet>
-      <h2 style={{ fontSize: "2rem", fontWeight: 300 }}>Deep Chat</h2>
+      <h2 style={{ fontSize: "2rem", fontWeight: 300 }}>tsuuji</h2>
       <DeepChat
         style={{ borderRadius: "10px", width: "50vw", height: `calc(90vh - 70px)`, paddingTop: "10px", backgroundColor: "#242838" }}
         messageStyles={{
@@ -45,7 +49,6 @@ export default function App() {
         }}
         requestBodyLimits={{ maxMessages: -1 }} // each request sends full chat history
         requestInterceptor={(requestDetails) => {
-          console.log(requestDetails.body.messages);
           requestDetails.body = {
             "prompt": instruction_header + base_prompt + requestDetails.body.messages.map((message: { role: string, text: string; }) => {
               if (message.role === "ai") {

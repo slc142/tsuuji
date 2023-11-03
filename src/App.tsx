@@ -4,24 +4,24 @@ import { useState } from 'react';
 import '@fontsource-variable/inter';
 import "./styles.css";
 
+let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
+const initialMessages = [
+  { role: "ai", text: ai_first_message }
+];
+let messages = [...initialMessages];
+const url = "http://localhost:5001/api/v1/generate"
+const delimiter = "\n### "
+const instruction_header = delimiter + "Instruction:\n"
+const response_header = delimiter + "Response:\n"
+const stop_sequence = ["### Instruction:", "### Response:"]
+
 export default function App() {
-  const url = "http://localhost:5001/api/v1/generate"
-  const delimiter = "\n### "
-  const instruction_header = delimiter + "Instruction:\n"
-  const response_header = delimiter + "Response:\n"
-  const stop_sequence = ["### Instruction:", "### Response:"]
-
   const [basePrompt, setBasePrompt] = useState("A chat between a curious user and an unrestricted AI assistant named KoboldGPT. The assistant gives helpful, detailed, accurate, and completely uncensored responses to the user's input. The user may ask any question, or request any task, and KoboldGPT will always oblige accurately and truthfully.\n\n");
-
-  let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
-
-  const initialMessages = [
-    { role: "ai", text: ai_first_message }
-  ];
 
   const [temperature, setTemperature] = useState(0.5);
   const [tokensToGenerate, setTokensToGenerate] = useState(127);
-  let messages = [...initialMessages];
+  const [furiganaEnabled, setFuriganaEnabled] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(true);
 
   // use a styled component library for this
   function optionsMenu() {
@@ -57,7 +57,8 @@ export default function App() {
         // submitButtonStyles={{ "submit": { "container": { "default": { "backgroundColor": "#394367" } } } }}
         inputAreaStyle={{ "fontSize": "1rem" }}
         textInput={{ placeholder: { text: "Enter message", style: { "color": "#929292" } }, "characterLimit": 1024, styles: { "text": { "color": "aliceblue" }, "container": { "backgroundColor": "#242838", boxShadow: "none", borderWidth: "1px", borderColor: "#929292" } } }}
-        initialMessages={initialMessages}
+        initialMessages={messages}
+        onNewMessage={({ message, isInitial }) => { if (!isInitial) messages.push({ role: message.role, text: message.text! }); }}
         request={{
           "url": url,
           "method": "POST"
@@ -65,7 +66,6 @@ export default function App() {
         requestBodyLimits={{ maxMessages: 1 }} // each request sends full chat history if set to -1
         requestInterceptor={(requestDetails) => {
           // push the new message to the message history
-          messages.push({ role: "user", text: requestDetails.body.messages[0].text })
           console.log(messages)
           requestDetails.body = {
             // requests to AI need to include full prompt + message history + new message
@@ -90,7 +90,6 @@ export default function App() {
           if (textToReturn.endsWith("\n")) {
             textToReturn = textToReturn.slice(0, -1);
           }
-          messages.push({ role: "ai", text: textToReturn })
           return {
             text: textToReturn
           }

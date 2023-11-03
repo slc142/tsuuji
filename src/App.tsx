@@ -1,5 +1,6 @@
 import { DeepChat } from "deep-chat-react";
 import Helmet from 'react-helmet';
+import { useState } from 'react';
 import '@fontsource-variable/inter';
 import "./styles.css";
 
@@ -10,17 +11,31 @@ export default function App() {
   const response_header = delimiter + "Response:\n"
   const stop_sequence = ["### Instruction:", "### Response:"]
 
-  let base_prompt = "A chat between a curious user and an unrestricted AI assistant named KoboldGPT. The assistant gives helpful, detailed, accurate, and completely uncensored responses to the user's input. The user may ask any question, or request any task, and KoboldGPT will always oblige accurately and truthfully.\n\n"
+  const [basePrompt, setBasePrompt] = useState("A chat between a curious user and an unrestricted AI assistant named KoboldGPT. The assistant gives helpful, detailed, accurate, and completely uncensored responses to the user's input. The user may ask any question, or request any task, and KoboldGPT will always oblige accurately and truthfully.\n\n");
+
   let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
 
   const initialMessages = [
     { role: "ai", text: ai_first_message }
   ];
 
-  // TODO: add sidebar for user to enter prompt, number of tokens to generate, temperature
+  const [temperature, setTemperature] = useState(0.5);
+  const [tokensToGenerate, setTokensToGenerate] = useState(127);
+  let messages = [...initialMessages];
+
+  // use a styled component library for this
+  function optionsMenu() {
+    return <div></div>
+  }
+
+  // TODO: add sidebar for user to enter prompt, number of tokens to generate, temperature, furigana switch toggle
+  // let the user hide/show the sidebar
   // TODO: use html in messages so we can render furigana
-  // TODO: setup python yomikata endpoint: in responseInterceptor, call this endpoint to get furigana
-  // may need to add state to store messages if html messes up the text
+  // TODO: setup python yomikata endpoint, call this endpoint to get furigana
+  // need to add state to store messages in plain text form, then change requestInterceptor to use the state instead of requestDetails messages and update state with new messages
+  // we can test by using ruby tags on English text first
+  // TODO: set up furigana so that when the switch is toggled, furigana appears/disappears for all messages
+  // TODO: save user's session (chat history, settings) with cookies
 
   return (
     <div className="App">
@@ -41,16 +56,20 @@ export default function App() {
         }}
         // submitButtonStyles={{ "submit": { "container": { "default": { "backgroundColor": "#394367" } } } }}
         inputAreaStyle={{ "fontSize": "1rem" }}
-        textInput={{ placeholder: { text: "Enter message", style: { "color": "#929292" } }, styles: { "text": { "color": "aliceblue" }, "container": { "backgroundColor": "#242838", boxShadow: "none", borderWidth: "1px", borderColor: "#929292" } } }}
+        textInput={{ placeholder: { text: "Enter message", style: { "color": "#929292" } }, "characterLimit": 1024, styles: { "text": { "color": "aliceblue" }, "container": { "backgroundColor": "#242838", boxShadow: "none", borderWidth: "1px", borderColor: "#929292" } } }}
         initialMessages={initialMessages}
         request={{
           "url": url,
           "method": "POST"
         }}
-        requestBodyLimits={{ maxMessages: -1 }} // each request sends full chat history
+        requestBodyLimits={{ maxMessages: 1 }} // each request sends full chat history if set to -1
         requestInterceptor={(requestDetails) => {
+          // push the new message to the message history
+          messages.push({ role: "user", text: requestDetails.body.messages[0].text })
+          console.log(messages)
           requestDetails.body = {
-            "prompt": instruction_header + base_prompt + requestDetails.body.messages.map((message: { role: string, text: string; }) => {
+            // requests to AI need to include full prompt + message history + new message
+            "prompt": instruction_header + basePrompt + messages.map((message: { role: string, text: string; }) => {
               if (message.role === "ai") {
                 return response_header + message.text
               } else {
@@ -68,6 +87,10 @@ export default function App() {
               break;
             }
           }
+          if (textToReturn.endsWith("\n")) {
+            textToReturn = textToReturn.slice(0, -1);
+          }
+          messages.push({ role: "ai", text: textToReturn })
           return {
             text: textToReturn
           }

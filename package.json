@@ -5,7 +5,10 @@
   "keywords": [],
   "main": "src/index.tsx",
   "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
     "@fontsource-variable/inter": "^5.0.15",
+    "@mui/material": "^5.14.16",
     "bookshelf-deep-changed": "1.0.0",
     "deep-chat-react": "latest",
     "react": "18.0.0",

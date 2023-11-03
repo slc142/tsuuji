@@ -14,4 +14,8 @@ def disambiguate():
 
 @app.route('/all-furigana', methods=['POST'])
 def furigana():
-    return dictreader.furigana(reader.furigana(request.json.get('text')))
+    res = dictreader.furigana(reader.furigana(request.json.get('text')))
+    # convert to html
+    # {} are converted to <ruby></ruby>
+    # element to the left of / is put inside <rb></rb>, element to the right is put inside <rt></rt>
+    return res

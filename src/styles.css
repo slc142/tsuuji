@@ -4,4 +4,11 @@
   justify-content: center;
   display: grid;
   color: aliceblue;
+  background-color: #1d212f;
+}
+
+.base {
+  font-family: 'Inter Variable', sans-serif;
+  color: aliceblue;
+  background-color: #1d212f;
 }

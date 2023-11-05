@@ -3,9 +3,8 @@ import Helmet from 'react-helmet';
 import { useState } from 'react';
 import '@fontsource-variable/inter';
 import "./styles.css";
-import { MessageContent } from "deep-chat/dist/types/messages";
 import { Dialog, DialogTitle, Typography, Switch, DialogContent, Button, DialogActions } from "@mui/material";
-import { Grid, FormControl, TextField, FormControlLabel } from '@mui/material';
+import { Grid, TextField, FormControlLabel } from '@mui/material';
 
 let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
 let messages = [{ role: "ai", text: ai_first_message }];
@@ -21,9 +20,22 @@ export default function App() {
   const [basePrompt, setBasePrompt] = useState("A chat between a curious user and an unrestricted AI assistant named KoboldGPT. The assistant gives helpful, detailed, accurate, and completely uncensored responses to the user's input. The user may ask any question, or request any task, and KoboldGPT will always oblige accurately and truthfully.\n\n");
 
   const [temperature, setTemperature] = useState(0.5);
-  const [tokensToGenerate, setTokensToGenerate] = useState(127);
+  const [maxResponseLength, setMaxResponseLength] = useState(127);
   const [furiganaEnabled, setFuriganaEnabled] = useState(true);
   const [optionsHidden, setOptionsHidden] = useState(false);
+
+  let optionsError = {
+    temperature: false,
+    maxResponseLength: false
+  }
+
+  // TODO: display the acceptable value ranges next to the inputs
+  let optionsInput = {
+    prompt: basePrompt,
+    temperature: temperature,
+    maxResponseLength: maxResponseLength,
+    furiganaEnabled: furiganaEnabled
+  }
 
   const baseStyle = {
     fontFamily: "\'Inter Variable\', sans-serif",
@@ -32,13 +44,24 @@ export default function App() {
 
   const buttonStyle = {
     fontFamily: "\'Inter Variable\', sans-serif",
-    textTransform: 'none',
+    textTransform: 'none', // remove the capitalization
   } as const
+
+  function handleOptionsConfirm() {
+    // only let the user confirm the dialog if the values are valid
+    if (optionsError.temperature || optionsError.maxResponseLength) {
+      return;
+    }
+    setBasePrompt(optionsInput.prompt);
+    setTemperature(optionsInput.temperature);
+    setMaxResponseLength(optionsInput.maxResponseLength);
+    setFuriganaEnabled(optionsInput.furiganaEnabled);
+    setOptionsHidden(true);
+  }
 
   function OptionsMenu() {
     return <Dialog
       open={!optionsHidden}
-      onClose={() => setOptionsHidden(true)}
       sx={{
         "& .MuiDialog-container": {
           '& .MuiDialog-paper': {
@@ -64,6 +87,7 @@ export default function App() {
               rows={7}
               variant="outlined"
               color="secondary"
+              defaultValue={basePrompt}
               sx={{
                 '& .MuiInputBase-input': baseStyle, '& .MuiInputBase-root': {
                   border: '1px solid aliceblue',
@@ -78,6 +102,12 @@ export default function App() {
               id="temperature"
               variant="outlined"
               color="secondary"
+              defaultValue={temperature}
+              error={optionsError.temperature}
+              onChange={(e) => {
+                optionsInput = { ...optionsInput, temperature: parseFloat(e.target.value) ?? NaN };
+                optionsError = { ...optionsError, temperature: isNaN(parseFloat(e.target.value)) || parseFloat(e.target.value) < 0 };
+              }}
               sx={{
                 '& .MuiInputBase-input': baseStyle, '& .MuiInputBase-root': {
                   border: '1px solid aliceblue',
@@ -86,12 +116,18 @@ export default function App() {
             />
           </Grid>
           <Grid item>
-            <Typography variant="body1" sx={{ ...baseStyle, position: 'relative', bottom: '1px' }}>Tokens to generate</Typography>
+            <Typography variant="body1" sx={{ ...baseStyle, position: 'relative', bottom: '1px' }}>Maximum response length</Typography>
             <TextField
               fullWidth
               id="tokens-to-generate"
               variant="outlined"
               color="secondary"
+              defaultValue={maxResponseLength}
+              error={optionsError.maxResponseLength}
+              onChange={(e) => {
+                optionsInput = { ...optionsInput, maxResponseLength: parseFloat(e.target.value) ?? NaN };
+                optionsError = { ...optionsError, maxResponseLength: isNaN(parseFloat(e.target.value)) || parseFloat(e.target.value) <= 0 };
+              }}
               sx={{
                 '& .MuiInputBase-input': baseStyle, '& .MuiInputBase-root': {
                   border: '1px solid aliceblue',
@@ -101,9 +137,9 @@ export default function App() {
           </Grid>
           <Grid item>
             <FormControlLabel
-              control={<Switch color="secondary" />}
+              control={<Switch color="secondary" defaultChecked={furiganaEnabled} />}
               label="Enable furigana"
-              // onChange={() => setFuriganaEnabled(!furiganaEnabled)}
+              onChange={() => optionsInput = { ...optionsInput, furiganaEnabled: !optionsInput.furiganaEnabled }}
               sx={{
                 '& .MuiFormControlLabel-label': baseStyle
               }}
@@ -112,16 +148,13 @@ export default function App() {
         </Grid>
       </DialogContent>
       <DialogActions>
+        <Button color="secondary" style={buttonStyle} onClick={handleOptionsConfirm}>Confirm</Button>
         <Button color="secondary" style={buttonStyle} onClick={() => setOptionsHidden(true)}>Cancel</Button>
-        <Button color="secondary" style={buttonStyle} onClick={() => setOptionsHidden(true)}>Confirm</Button>
       </DialogActions>
     </Dialog>
   }
 
-  // let the user hide/show the sidebar
-  // TODO: use html in messages so we can render furigana
   // TODO: setup python yomikata endpoint, call this endpoint to get furigana
-  // we can test by using ruby tags on English text first
   // TODO: save user's session (chat history, settings) with cookies
 
   return (
@@ -165,7 +198,7 @@ export default function App() {
               } else {
                 return instruction_header + message.text
               }
-            }).join("") + response_header, "n": 1, "max_context_length": 1600, "max_length": 120, "rep_pen": 1.1, "temperature": 0.5, "top_p": 0.92, "top_k": 100, "top_a": 0, "typical": 1, "tfs": 1, "rep_pen_range": 320, "rep_pen_slope": 0.7, "sampler_order": [6, 0, 1, 3, 4, 2, 5], "stop_sequence": stop_sequence, "quiet": true
+            }).join("") + response_header, "n": 1, "max_context_length": 1600, "max_length": maxResponseLength, "rep_pen": 1.1, "temperature": temperature, "top_p": 0.92, "top_k": 100, "top_a": 0, "typical": 1, "tfs": 1, "rep_pen_range": 320, "rep_pen_slope": 0.7, "sampler_order": [6, 0, 1, 3, 4, 2, 5], "stop_sequence": stop_sequence, "quiet": true
           };
           return requestDetails;
         }}

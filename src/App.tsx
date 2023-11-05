@@ -4,7 +4,7 @@ import { useState } from 'react';
 import '@fontsource-variable/inter';
 import "./styles.css";
 import { MessageContent } from "deep-chat/dist/types/messages";
-import { Drawer, Divider, Typography, Switch } from "@mui/material";
+import { Dialog, DialogTitle, Typography, Switch, DialogContent, Button, DialogActions } from "@mui/material";
 import { Grid, FormControl, TextField, FormControlLabel } from '@mui/material';
 
 let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
@@ -23,55 +23,59 @@ export default function App() {
   const [temperature, setTemperature] = useState(0.5);
   const [tokensToGenerate, setTokensToGenerate] = useState(127);
   const [furiganaEnabled, setFuriganaEnabled] = useState(true);
-  const [sidebarHidden, setSidebarHidden] = useState(false);
+  const [optionsHidden, setOptionsHidden] = useState(false);
 
-  const drawerWidth = '20vw';
   const baseStyle = {
     fontFamily: "\'Inter Variable\', sans-serif",
     color: "aliceblue"
   } as const
 
-  // use a styled component library for this
+  const buttonStyle = {
+    fontFamily: "\'Inter Variable\', sans-serif",
+    textTransform: 'none',
+  } as const
+
   function OptionsMenu() {
-    return <Drawer
+    return <Dialog
+      open={!optionsHidden}
+      onClose={() => setOptionsHidden(true)}
       sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: drawerWidth,
-          fontFamily: "\'Inter Variable\', sans-serif",
-          color: 'aliceblue',
-          backgroundColor: '#1d212f',
-          borderColor: 'aliceblue',
-          borderWidth: '1px',
-        },
+        "& .MuiDialog-container": {
+          '& .MuiDialog-paper': {
+            fontFamily: "\'Inter Variable\', sans-serif",
+            color: 'aliceblue',
+            backgroundColor: '#1d212f',
+            borderColor: 'aliceblue',
+            borderWidth: '1px',
+            width: "100%",
+            maxWidth: "20vw",
+          },
+        }
       }}
-      variant="persistent"
-      anchor="right"
-      open={!sidebarHidden}
     >
-      <h3 style={{ fontSize: "1.5rem", fontWeight: 300 }}>Options</h3>
-      <Divider />
-      <Grid container direction="column" spacing={2}>
-        <Grid item>
-          <Typography variant="body1" sx={{ ...baseStyle, position: 'relative', bottom: '1px' }}>Prompt</Typography>
-          <TextField
-            multiline
-            rows={7}
-            variant="outlined"
-            color="secondary"
-            sx={{
-              '& .MuiInputBase-input': baseStyle, '& .MuiInputBase-root': {
-                border: '1px solid aliceblue',
-              },
-            }}
-          />
-        </Grid>
-        <Grid item>
-          <FormControl>
+      <DialogTitle style={baseStyle} align="center">Options</DialogTitle>
+      <DialogContent>
+        <Grid container direction="column" spacing={2}>
+          <Grid item>
+            <Typography variant="body1" sx={{ ...baseStyle, position: 'relative', bottom: '1px' }}>Prompt</Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={7}
+              variant="outlined"
+              color="secondary"
+              sx={{
+                '& .MuiInputBase-input': baseStyle, '& .MuiInputBase-root': {
+                  border: '1px solid aliceblue',
+                },
+              }}
+            />
+          </Grid>
+          <Grid item>
             <Typography variant="body1" sx={{ ...baseStyle, position: 'relative', bottom: '1px' }}>Temperature</Typography>
             <TextField
-              id="number-input-1"
+              fullWidth
+              id="temperature"
               variant="outlined"
               color="secondary"
               sx={{
@@ -80,13 +84,12 @@ export default function App() {
                 }
               }}
             />
-          </FormControl>
-        </Grid>
-        <Grid item>
-          <FormControl>
+          </Grid>
+          <Grid item>
             <Typography variant="body1" sx={{ ...baseStyle, position: 'relative', bottom: '1px' }}>Tokens to generate</Typography>
             <TextField
-              id="number-input-2"
+              fullWidth
+              id="tokens-to-generate"
               variant="outlined"
               color="secondary"
               sx={{
@@ -95,30 +98,30 @@ export default function App() {
                 }
               }}
             />
-          </FormControl>
+          </Grid>
+          <Grid item>
+            <FormControlLabel
+              control={<Switch color="secondary" />}
+              label="Enable furigana"
+              // onChange={() => setFuriganaEnabled(!furiganaEnabled)}
+              sx={{
+                '& .MuiFormControlLabel-label': baseStyle
+              }}
+            />
+          </Grid>
         </Grid>
-        <Grid item>
-          <FormControlLabel
-            control={<Switch checked={furiganaEnabled} color="secondary" />}
-            label="Enable furigana"
-            onChange={() => setFuriganaEnabled(!furiganaEnabled)}
-            sx={{
-              '& .MuiFormControlLabel-label': baseStyle
-            }}
-          />
-        </Grid>
-      </Grid>
-      <Divider />
-    </Drawer>
+      </DialogContent>
+      <DialogActions>
+        <Button color="secondary" style={buttonStyle} onClick={() => setOptionsHidden(true)}>Cancel</Button>
+        <Button color="secondary" style={buttonStyle} onClick={() => setOptionsHidden(true)}>Confirm</Button>
+      </DialogActions>
+    </Dialog>
   }
 
-  // TODO: add sidebar for user to enter prompt, number of tokens to generate, temperature, furigana switch toggle
   // let the user hide/show the sidebar
   // TODO: use html in messages so we can render furigana
   // TODO: setup python yomikata endpoint, call this endpoint to get furigana
-  // need to add state to store messages in plain text form, then change requestInterceptor to use the state instead of requestDetails messages and update state with new messages
   // we can test by using ruby tags on English text first
-  // TODO: set up furigana so that when the switch is toggled, furigana appears/disappears for all messages
   // TODO: save user's session (chat history, settings) with cookies
 
   return (

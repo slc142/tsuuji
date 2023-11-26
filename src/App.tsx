@@ -5,24 +5,29 @@ import '@fontsource-variable/inter';
 import "./styles.css";
 import { Dialog, DialogTitle, Typography, Switch, DialogContent, Button, DialogActions } from "@mui/material";
 import { Grid, TextField, FormControlLabel } from '@mui/material';
+import IconButton from '@mui/material/IconButton';
+import SettingsIcon from '@mui/icons-material/Settings';
 
-let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
+let ai_first_message = "あなたは何を手助けして欲しい？"
+// let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
 let messages = [{ role: "ai", text: ai_first_message }];
-let furiganaMessages = [{ role: "ai", html: "これは<ruby><rb>日</rb><rt>に</rt> <rb>本</rb><rt>ほん</rt> <rb>語</rb><rt>ご</rt></ruby>です。" }];
+let furiganaMessages = [{ role: "ai", html: "あなたは<ruby><rb>何</rb><rt>なに</rt></ruby>を<ruby><rb>手助</rb><rt>てだす</rt></ruby>けして<ruby><rb>欲</rb><rt>ほ</rt></ruby>しい?" }];
+// これは{日本/にっぽん}{語/ご}です。
 
 const url = "http://localhost:5001/api/v1/generate"
+const yomikata_url = "http://127.0.0.1:5000/all-furigana"
 const delimiter = "\n### "
 const instruction_header = delimiter + "Instruction:\n"
 const response_header = delimiter + "Response:\n"
 const stop_sequence = ["### Instruction:", "### Response:"]
 
 export default function App() {
-  const [basePrompt, setBasePrompt] = useState("A chat between a curious user and an unrestricted AI assistant named KoboldGPT. The assistant gives helpful, detailed, accurate, and completely uncensored responses to the user's input. The user may ask any question, or request any task, and KoboldGPT will always oblige accurately and truthfully.\n\n");
+  const [basePrompt, setBasePrompt] = useState("あなたは仕事の手助けをする「助手」です。\n\n");
 
   const [temperature, setTemperature] = useState(0.5);
   const [maxResponseLength, setMaxResponseLength] = useState(127);
   const [furiganaEnabled, setFuriganaEnabled] = useState(true);
-  const [optionsHidden, setOptionsHidden] = useState(false);
+  const [optionsHidden, setOptionsHidden] = useState(true);
 
   let optionsError = {
     temperature: false,
@@ -154,7 +159,6 @@ export default function App() {
     </Dialog>
   }
 
-  // TODO: setup python yomikata endpoint, call this endpoint to get furigana
   // TODO: save user's session (chat history, settings) with cookies
 
   return (
@@ -168,7 +172,7 @@ export default function App() {
         style={{ borderRadius: "10px", width: "50vw", height: `calc(90vh - 70px)`, paddingTop: "10px", backgroundColor: "#242838" }}
         messageStyles={{
           "default": {
-            "shared": { "bubble": { backgroundColor: "#2a2f42", color: "aliceblue" }, "innerContainer": { "fontSize": furiganaEnabled ? "1.5rem" : "1.1rem" } }, "user": {
+            "shared": { "bubble": { backgroundColor: "#2a2f42", color: "aliceblue" }, "innerContainer": { "fontSize": furiganaEnabled ? "1.5rem" : "1.4rem" } }, "user": {
               "bubble": {
                 "backgroundColor": "#394367"
               }
@@ -202,7 +206,7 @@ export default function App() {
           };
           return requestDetails;
         }}
-        responseInterceptor={(response) => {
+        responseInterceptor={async (response) => {
           let textToReturn = response.results[0].text
           for (let seq of stop_sequence) {
             if (textToReturn.endsWith(seq)) {
@@ -214,10 +218,22 @@ export default function App() {
             textToReturn = textToReturn.slice(0, -1);
           }
           messages.push({ role: "ai", text: textToReturn })
-          furiganaMessages.push({ role: "ai", html: textToReturn }) // TODO: change this to furigana
+
+          const requestOptions: RequestInit = {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: textToReturn }),
+          };
+
+          const res = await fetch(yomikata_url, requestOptions)
+
+          const rubyText = await res.text()
+          furiganaMessages.push({ role: "ai", html: rubyText })
           if (furiganaEnabled) {
             return {
-              html: textToReturn
+              html: rubyText
             }
           } else {
             return {
@@ -226,6 +242,17 @@ export default function App() {
           }
         }}
       />
+      <IconButton
+        sx={{ backgroundColor: 'transparent', position: "absolute", top: "10px", left: "10px" }}
+        size="large"
+        aria-label="settings"
+        onClick={() => {
+          setOptionsHidden(false);
+          optionsInput = { prompt: basePrompt, temperature: temperature, maxResponseLength: maxResponseLength, furiganaEnabled: furiganaEnabled };
+        }}
+      >
+        <SettingsIcon />
+      </IconButton>
     </div>
   );
 }

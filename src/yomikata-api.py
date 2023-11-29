@@ -8,6 +8,7 @@ from flask import Flask, request
 from pymongo.mongo_client import MongoClient
 
 # flask --app yomikata-api run --debug
+# gunicorn -w 4 -b 0.0.0.0 'yomikata-api:app'
 
 uri = "mongodb+srv://samuel:CIbpAoqojkPxVT8r@cluster0.xaatb2a.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri)
@@ -21,6 +22,11 @@ dictreader = Dictionary()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, origins="*", send_wildcard=True)
 app.config["CORS_HEADERS"] = "Content-Type"
+
+
+@app.route("/")
+def hello():
+    return "hi"
 
 
 @app.route("/create-user", methods=["POST"])

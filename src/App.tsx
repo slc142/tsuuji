@@ -7,17 +7,14 @@ import { Dialog, DialogTitle, Typography, Switch, DialogContent, Button, DialogA
 import { Grid, TextField, FormControlLabel } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import SettingsIcon from '@mui/icons-material/Settings';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 let ai_first_message = "あなたは何を手助けして欲しい？"
 let ai_furigana_first_message = "あなたは<ruby><rb>何</rb><rt>なに</rt></ruby>を<ruby><rb>手助</rb><rt>てだす</rt></ruby>けして<ruby><rb>欲</rb><rt>ほ</rt></ruby>しい?"
 // let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
 let messages = [{ role: "ai", text: ai_first_message }];
-let furiganaMessages = [{ role: "ai", html: ai_furigana_first_message }];
 // これは{日本/にっぽん}{語/ご}です。
 
 const url = "http://localhost:5001/api/v1/generate"
-const yomikata_url = "http://127.0.0.1:5000/all-furigana"
 const db_url = "http://127.0.0.1:5000/"
 const delimiter = "\n### "
 const instruction_header = delimiter + "Instruction:\n"
@@ -29,8 +26,7 @@ export default function App() {
 
   const [temperature, setTemperature] = useState(0.5);
   const [maxResponseLength, setMaxResponseLength] = useState(100);
-  const [furiganaEnabled, setFuriganaEnabled] = useState(true);
-  const [optionsHidden, setOptionsHidden] = useState(false);
+  const [optionsHidden, setOptionsHidden] = useState(true);
 
   let optionsError = {
     temperature: false,
@@ -42,7 +38,6 @@ export default function App() {
     prompt: basePrompt,
     temperature: temperature,
     maxResponseLength: maxResponseLength,
-    furiganaEnabled: furiganaEnabled
   }
 
   const baseStyle = {
@@ -63,7 +58,6 @@ export default function App() {
     setBasePrompt(optionsInput.prompt);
     setTemperature(optionsInput.temperature);
     setMaxResponseLength(optionsInput.maxResponseLength);
-    setFuriganaEnabled(optionsInput.furiganaEnabled);
     setOptionsHidden(true);
   }
 
@@ -143,16 +137,6 @@ export default function App() {
               }}
             />
           </Grid>
-          <Grid item>
-            <FormControlLabel
-              control={<Switch color="secondary" defaultChecked={furiganaEnabled} />}
-              label="Enable furigana"
-              onChange={() => optionsInput = { ...optionsInput, furiganaEnabled: !optionsInput.furiganaEnabled }}
-              sx={{
-                '& .MuiFormControlLabel-label': baseStyle
-              }}
-            />
-          </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
@@ -167,32 +151,6 @@ export default function App() {
   if (document.cookie.includes("id")) {
     // load the messages if the user has id cookie
     userId = document.cookie.split("id=")[1]
-    // const userData = fetch(db_url + "get-user", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({ user: userId }),
-    // }).then(async response => {
-    //   const res = await response.json();
-    //   if (res) {
-    //     console.log("load user")
-    //     messages = res.messages;
-    //     furiganaMessages = res.furiganaMessages;
-    //   } else {
-    //     // make user with current id
-    //     console.log("cookie exists, create user")
-    //     const userData = fetch(db_url + "create-user", {
-    //       method: "POST",
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //       },
-    //       body: JSON.stringify({ user: userId }),
-    //     }).then(async response => {
-    //       const res = await response.text();
-    //     });
-    //   }
-    // });
   } else {
     // create a new user
     console.log("create user")
@@ -204,12 +162,14 @@ export default function App() {
       body: JSON.stringify({}),
     }).then(async response => {
       const res = await response.text();
-      console.log(res)
-      document.cookie = `id=${res}`;
-      userId = res
+      if (res) {
+        console.log(res)
+        document.cookie = `id=${res}`;
+        userId = res
+      }
     });
   }
-  console.log(userId)
+  // console.log(userId)
 
   return (
     <div className="App">
@@ -222,7 +182,7 @@ export default function App() {
         style={{ borderRadius: "10px", width: "50vw", height: `calc(90vh - 70px)`, paddingTop: "10px", backgroundColor: "#242838" }}
         messageStyles={{
           "default": {
-            "shared": { "bubble": { backgroundColor: "#2a2f42", color: "aliceblue" }, "innerContainer": { "fontSize": furiganaEnabled ? "1.5rem" : "1.4rem" } }, "user": {
+            "shared": { "bubble": { backgroundColor: "#2a2f42", color: "aliceblue" }, "innerContainer": { "fontSize": "1.4rem" } }, "user": {
               "bubble": {
                 "backgroundColor": "#394367"
               }
@@ -232,7 +192,7 @@ export default function App() {
         // submitButtonStyles={{ "submit": { "container": { "default": { "backgroundColor": "#394367" } } } }}
         inputAreaStyle={{ "fontSize": "1.1rem" }}
         textInput={{ placeholder: { text: "Enter message", style: { "color": "#929292" } }, "characterLimit": 1024, styles: { "text": { "color": "aliceblue" }, "container": { "backgroundColor": "#242838", boxShadow: "none", borderWidth: "1px", borderColor: "#929292" } } }}
-        initialMessages={furiganaEnabled ? furiganaMessages : messages}
+        initialMessages={messages}
         // onNewMessage={({ message, isInitial }) => { if (!isInitial) messages.push({ role: message.role, text: message.text! }); }}
         request={{
           "url": url,
@@ -247,15 +207,6 @@ export default function App() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ user: userId, message: { role: "user", text: requestDetails.body.messages[0].text } }),
-          });
-
-          furiganaMessages.push({ role: "user", html: requestDetails.body.messages[0].text })
-          fetch(db_url + "add-furigana-message", {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user: userId, message: { role: "user", html: requestDetails.body.messages[0].text } }),
           });
 
           requestDetails.body = {
@@ -297,27 +248,10 @@ export default function App() {
             },
             body: JSON.stringify({ text: textToReturn }),
           };
-
-          const res = await fetch(yomikata_url, requestOptions)
-
-          const rubyText = await res.text()
-          furiganaMessages.push({ role: "ai", html: rubyText })
-          fetch(db_url + "add-furigana-message", {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user: userId, message: { role: "ai", html: rubyText } }),
-          });
-          if (furiganaEnabled) {
-            return {
-              html: rubyText
-            }
-          } else {
-            return {
-              text: textToReturn
-            }
+          return {
+            text: textToReturn
           }
+
         }}
       />
       <IconButton
@@ -326,35 +260,11 @@ export default function App() {
         aria-label="settings"
         onClick={() => {
           setOptionsHidden(false);
-          optionsInput = { prompt: basePrompt, temperature: temperature, maxResponseLength: maxResponseLength, furiganaEnabled: furiganaEnabled };
+          optionsInput = { prompt: basePrompt, temperature: temperature, maxResponseLength: maxResponseLength };
         }}
       >
         <SettingsIcon />
       </IconButton>
-      {/* <IconButton
-        sx={{ backgroundColor: 'transparent', position: "absolute", top: "10px", right: "10px" }}
-        size="large"
-        aria-label="delete"
-        onClick={() => {
-          fetch(db_url + "clear-messages", {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user: userId }),
-          });
-          fetch(db_url + "clear-furigana-messages", {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user: userId }),
-          });
-          messages = [{ role: "ai", text: ai_first_message }];
-          furiganaMessages = [{ role: "ai", html: ai_furigana_first_message }];
-        }}>
-        <DeleteIcon />
-      </IconButton> */}
     </div>
   );
 }

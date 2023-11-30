@@ -11,6 +11,7 @@
     "@mui/icons-material": "^5.14.18",
     "@mui/material": "^5.14.16",
     "bookshelf-deep-changed": "1.0.0",
+    "cohere-ai": "^7.4.3",
     "deep-chat-react": "latest",
     "react": "18.0.0",
     "react-dom": "18.0.0",

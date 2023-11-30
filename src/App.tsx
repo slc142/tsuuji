@@ -7,24 +7,29 @@ import { Dialog, DialogTitle, Typography, Switch, DialogContent, Button, DialogA
 import { Grid, TextField, FormControlLabel } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import SettingsIcon from '@mui/icons-material/Settings';
+import { CohereClient } from "cohere-ai";
 
-let ai_first_message = "あなたは何を手助けして欲しい？"
+// let ai_first_message = "あなたは何を手助けして欲しい？"
 let ai_furigana_first_message = "あなたは<ruby><rb>何</rb><rt>なに</rt></ruby>を<ruby><rb>手助</rb><rt>てだす</rt></ruby>けして<ruby><rb>欲</rb><rt>ほ</rt></ruby>しい?"
-// let ai_first_message = "Hello, I am KoboldGPT, your personal AI assistant. What would you like to know?"
+let ai_first_message = "Hello, I am your personal AI assistant. What would you like to know?"
 let messages = [{ role: "ai", text: ai_first_message }];
 // これは{日本/にっぽん}{語/ご}です。
 
-const url = "http://localhost:5001/api/v1/generate"
-const db_url = "http://127.0.0.1:5000/"
+const url = "https://api.cohere.ai/v1/chat"
+const db_url = "https://tsuuji-backend.onrender.com/"
 const delimiter = "\n### "
 const instruction_header = delimiter + "Instruction:\n"
 const response_header = delimiter + "Response:\n"
 const stop_sequence = ["### Instruction:", "### Response:"]
 
-export default function App() {
-  const [basePrompt, setBasePrompt] = useState("あなたは仕事の手助けをする「助手」です。\n\n");
+const cohere = new CohereClient({
+  token: "WDgHb2Zhd1SkcuBniZws7WZ2kfFiFVEdmS6y2xZc", // This is your trial API key
+});
 
-  const [temperature, setTemperature] = useState(0.5);
+export default function App() {
+  const [basePrompt, setBasePrompt] = useState(ai_first_message);
+
+  const [temperature, setTemperature] = useState(0.3);
   const [maxResponseLength, setMaxResponseLength] = useState(100);
   const [optionsHidden, setOptionsHidden] = useState(true);
 
@@ -90,6 +95,9 @@ export default function App() {
               variant="outlined"
               color="secondary"
               defaultValue={basePrompt}
+              onChange={(e) => {
+                optionsInput = { ...optionsInput, prompt: e.target.value };
+              }}
               sx={{
                 '& .MuiInputBase-input': baseStyle, '& .MuiInputBase-root': {
                   border: '1px solid aliceblue',
@@ -192,7 +200,7 @@ export default function App() {
         // submitButtonStyles={{ "submit": { "container": { "default": { "backgroundColor": "#394367" } } } }}
         inputAreaStyle={{ "fontSize": "1.1rem" }}
         textInput={{ placeholder: { text: "Enter message", style: { "color": "#929292" } }, "characterLimit": 1024, styles: { "text": { "color": "aliceblue" }, "container": { "backgroundColor": "#242838", boxShadow: "none", borderWidth: "1px", borderColor: "#929292" } } }}
-        initialMessages={messages}
+        initialMessages={[{ role: "ai", text: basePrompt }]}
         // onNewMessage={({ message, isInitial }) => { if (!isInitial) messages.push({ role: message.role, text: message.text! }); }}
         request={{
           "url": url,
@@ -209,20 +217,33 @@ export default function App() {
             body: JSON.stringify({ user: userId, message: { role: "user", text: requestDetails.body.messages[0].text } }),
           });
 
-          requestDetails.body = {
-            // requests to AI need to include full prompt + message history + new message
-            "prompt": instruction_header + basePrompt + messages.map((message: { role: string, text: string; }) => {
-              if (message.role === "ai") {
-                return response_header + message.text
-              } else {
-                return instruction_header + message.text
-              }
-            }).join("") + response_header, "n": 1, "max_context_length": 1600, "max_length": maxResponseLength, "rep_pen": 1.1, "temperature": temperature, "top_p": 0.92, "top_k": 100, "top_a": 0, "typical": 1, "tfs": 1, "rep_pen_range": 320, "rep_pen_slope": 0.7, "sampler_order": [6, 0, 1, 3, 4, 2, 5], "stop_sequence": stop_sequence, "quiet": true
+          requestDetails.headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer WDgHb2Zhd1SkcuBniZws7WZ2kfFiFVEdmS6y2xZc'
           };
+
+          requestDetails.body = {
+            "model": "command-light",
+            "message": requestDetails.body.messages[0].text,
+            "temperature": temperature,
+            "chat_history": messages.map((message: { role: string, text: string; }) => {
+              return {
+                "role": "ai" ? "Chatbot" : "user",
+                "message": message.text
+              }
+            }).slice(0, -1),
+            "prompt_truncation": "AUTO",
+            "stream": false,
+            "citation_quality": "fast",
+            "connectors": [],
+            "documents": []
+          }
+          console.log(requestDetails)
           return requestDetails;
         }}
         responseInterceptor={async (response) => {
-          let textToReturn = response.results[0].text
+          console.log(response)
+          let textToReturn = response.text
           for (let seq of stop_sequence) {
             if (textToReturn.endsWith(seq)) {
               textToReturn = textToReturn.slice(0, -seq.length);
